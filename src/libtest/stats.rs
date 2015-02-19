@@ -12,7 +12,10 @@
 
 use std::cmp::Ordering::{self, Less, Greater, Equal};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
+#[cfg(not(stage0))]
 use std::collections::hash_map;
+#[cfg(stage0)]
+use std::collections::hash_map::{self, Hasher};
 use std::hash::Hash;
 use std::mem;
 use std::num::{Float, FromPrimitive};
@@ -332,8 +335,25 @@ pub fn winsorize<T: Float + FromPrimitive>(samples: &mut [T], pct: T) {
 
 /// Returns a HashMap with the number of occurrences of every element in the
 /// sequence that the iterator exposes.
+#[cfg(not(stage0))]
 pub fn freq_count<T, U>(iter: T) -> hash_map::HashMap<U, uint>
   where T: Iterator<Item=U>, U: Eq + Clone + Hash
+{
+    let mut map: hash_map::HashMap<U,uint> = hash_map::HashMap::new();
+    for elem in iter {
+        match map.entry(elem) {
+            Occupied(mut entry) => { *entry.get_mut() += 1; },
+            Vacant(entry) => { entry.insert(1); },
+        }
+    }
+    map
+}
+
+/// Returns a HashMap with the number of occurrences of every element in the
+/// sequence that the iterator exposes.
+#[cfg(stage0)]
+pub fn freq_count<T, U>(iter: T) -> hash_map::HashMap<U, uint>
+  where T: Iterator<Item=U>, U: Eq + Clone + Hash<Hasher>
 {
     let mut map: hash_map::HashMap<U,uint> = hash_map::HashMap::new();
     for elem in iter {
